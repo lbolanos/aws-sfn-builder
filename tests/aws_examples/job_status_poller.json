@@ -6,7 +6,12 @@
       "Type": "Task",
       "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:SubmitJob",
       "ResultPath": "$.guid",
+      "InputPath": "$.input",
       "Next": "Wait X Seconds",
+      "Parameters": {
+          "state": "run-mediainfo",
+          "$.guid_leo": "$.input"
+      },
       "Retry": [
         {
           "ErrorEquals": [

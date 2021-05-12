@@ -11,15 +11,17 @@ def test_runs_job_status_poller(example):
     runner = Runner()
 
     @runner.resource_provider("arn:aws:lambda:REGION:ACCOUNT_ID:function:SubmitJob")
-    def submit_job(payload):
+    def submit_job(payload, params):
         return payload
 
     @runner.resource_provider("arn:aws:lambda:REGION:ACCOUNT_ID:function:CheckJob")
-    def check_job(payload):
-        if random.random() < 0.2:
+    def check_job(payload, params):
+        if payload < 30:
             return "FAILED"
         else:
             return "SUCCEEDED"
 
     final_state, output = runner.run(sm, {'input': 25})
-    assert final_state.name in ("Get Final Job Status", "Job Failed")
+    assert final_state.name in ( "Job Failed")
+    final_state, output = runner.run(sm, {'input': 40})
+    assert final_state.name in ( "Get Final Job Status")

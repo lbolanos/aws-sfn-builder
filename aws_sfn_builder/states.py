@@ -73,6 +73,7 @@ class State(Node):
             "end": "End",
             "resource": "Resource",
             "input_path": "InputPath",
+            "parameters": "Parameters",
             "output_path": "OutputPath",
             "result_path": "ResultPath",
         },
@@ -94,6 +95,7 @@ class State(Node):
     end: bool = None
     resource: str = None
     input_path: str = None
+    parameters: str = None
     output_path: str = None
     result_path: str = None
 
@@ -129,6 +131,21 @@ class State(Node):
         if self.input_path:
             return parse_jsonpath(self.input_path).find(input)[0].value
         return input
+
+    def format_state_parameters(self, input):
+        """
+        Applies InputPath
+        """
+        if self.parameters:
+            new_params = {}
+            for name, value in self.parameters.items():
+                parsed = parse_jsonpath(value)
+                found = parsed.find(input)
+                if found:
+                    value = found[0].value
+                new_params[name] = value
+            return new_params
+        return None
 
     def format_result(self, input, resource_result):
         """
@@ -176,7 +193,8 @@ class State(Node):
 
     def execute(self, input, resource_resolver: Callable=None) -> Tuple[Optional[str], Any]:
         resource_input = self.format_state_input(input)
-        resource_result = resource_resolver(self.resource)(resource_input)
+        resource_parameters = self.format_state_parameters(input)
+        resource_result = resource_resolver(self.resource)(resource_input, resource_parameters)
         result = self.format_result(input, resource_result)
         return self.next, self.format_state_output(result)
 
