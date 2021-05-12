@@ -21,5 +21,5 @@ def test_runs_job_status_poller(example):
         else:
             return "SUCCEEDED"
 
-    final_state, output = runner.run(sm)
+    final_state, output = runner.run(sm, {'input': 25})
     assert final_state.name in ("Get Final Job Status", "Job Failed")
