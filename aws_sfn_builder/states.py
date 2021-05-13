@@ -191,6 +191,15 @@ class State(Node):
                 # an exception specifies an invalid path.
                 raise NotImplementedError()
 
+    def get_input_parameters(self, input):
+        resource_input = self.format_state_input(input)
+        resource_parameters = self.format_state_parameters(input)
+        return resource_input, resource_parameters
+
+    def get_output(self, input, resource_result):
+        result = self.format_result(input, resource_result)
+        return self.next, self.format_state_output(result)
+
     def execute(self, input, resource_resolver: Callable=None) -> Tuple[Optional[str], Any]:
         resource_input = self.format_state_input(input)
         resource_parameters = self.format_state_parameters(input)
