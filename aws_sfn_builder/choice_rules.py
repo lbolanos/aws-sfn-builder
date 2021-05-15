@@ -26,10 +26,13 @@ def to_bool(x):
 
 
 def to_numeric(x):
-    try:
+    if type(x) == int or type(x) == float:
+        return x
+    if x.isdigit():
         return int(x)
-    except ValueError:
+    else:
         return float(x)
+
 
 
 def to_timestamp(x):
