@@ -512,6 +512,14 @@ class Machine(Sequence):
         json_options.setdefault("indent", 4)
         return json.dumps(self.compile(state_visitor=state_visitor), **json_options)
 
+    def get_final_state(self):
+        for k in reversed(list(self.states.keys())):
+            state = self.states[k]
+            if state.end:
+                return state
+        return None
+
+
     def dry_run(self, trace: List=None):
         """
         DEPRECATED.
