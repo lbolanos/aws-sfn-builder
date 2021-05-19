@@ -25,7 +25,177 @@ def test_format_result_returns_applied_result(result_path, expected_result):
     state = State.parse({
         "ResultPath": result_path,
     })
-    result = state.format_result({"guid": "123-456"}, "ok")
+    result = state.format_result_selector("ok")
+    result = state.format_result({"guid": "123-456"}, result)
+    assert expected_result == result
+
+
+@pytest.mark.parametrize("result_path,expected_result", [
+    [{
+        "ResultSelector": {
+            "ClusterId.$": "$.output.ClusterId",
+            "ResourceType.$": "$.resourceType",
+            "StaticValue": "foo"
+        },
+        "ResultPath": "$.EMROutput"
+    }, {
+        "OtherDataFromInput": {},
+        "EMROutput": {
+            "ResourceType": "elasticmapreduce",
+            "ClusterId": "AKIAIOSFODNN7EXAMPLE",
+            "StaticValue": "foo"
+        }
+    }],
+    [
+        {
+            "ResultSelector": {
+                "modifiedPayload": {
+                    "body.$": "$.output.SdkHttpMetadata.HttpHeaders.Date",
+                    "statusCode.$": "$.resourceType",
+                    "requestId.$": "$.output.SdkResponseMetadata.RequestId"
+                }
+            },
+            "ResultPath": "$.mipres_result"
+        },
+        {
+            'OtherDataFromInput': {},
+            'mipres_result':
+                {
+                    'modifiedPayload':
+                        {
+                            'body': 'Mon, 25 Nov 2019 19:41:29 GMT',
+                            'statusCode': 'elasticmapreduce',
+                            'requestId': '1234-5678-9012'
+                        }
+                }
+        }
+    ]
+
+])
+def test_format_result_selector_returns_applied_result(result_path, expected_result):
+    state = State.parse(result_path)
+    input = {
+        "resourceType": "elasticmapreduce",
+        "resource": "createCluster.sync",
+        "output": {
+            "SdkHttpMetadata": {
+                "HttpHeaders": {
+                    "Content-Length": "1112",
+                    "Content-Type": "application/x-amz-JSON-1.1",
+                    "Date": "Mon, 25 Nov 2019 19:41:29 GMT",
+                    "x-amzn-RequestId": "1234-5678-9012"
+                },
+                "HttpStatusCode": 200
+            },
+            "SdkResponseMetadata": {
+                "RequestId": "1234-5678-9012"
+            },
+            "ClusterId": "AKIAIOSFODNN7EXAMPLE"
+        }
+    }
+    result = state.format_result_selector(input)
+    result_final = state.format_result({"OtherDataFromInput": {}}, result)
+    assert expected_result == result_final
+
+
+@pytest.mark.parametrize("result_path,expected_result", [
+    [{
+        "ResultSelector": {
+            "modifiedPayload": {
+                "body.$": "$.Payload.body",
+                "statusCode.$": "$.Payload.statusCode",
+                "requestId.$": "$.SdkResponseMetadata.RequestId"
+            }
+        },
+        "ResultPath": "$.TaskResult",
+        "OutputPath": "$.TaskResult.modifiedPayload"
+    }, {
+        "body": "hello, world!",
+        "statusCode": "200",
+        "requestId": "88fba57b-adbe-467f-abf4-daca36fc9028"
+    }]
+
+])
+def test_format_result_all_applied_result(result_path, expected_result):
+    state = State.parse(result_path)
+    output = {
+        "ExecutedVersion": "$LATEST",
+        "Payload": {
+            "statusCode": "200",
+            "body": "hello, world!"
+        },
+        "SdkHttpMetadata": {
+            "HttpHeaders": {
+                "Connection": "keep-alive",
+                "Content-Length": "43",
+                "Content-Type": "application/json",
+                "Date": "Thu, 16 Apr 2020 17:58:15 GMT",
+                "X-Amz-Executed-Version": "$LATEST",
+                "x-amzn-Remapped-Content-Length": "0",
+                "x-amzn-RequestId": "88fba57b-adbe-467f-abf4-daca36fc9028",
+                "X-Amzn-Trace-Id": "root=1-5e989cb6-90039fd8971196666b022b62;sampled=0"
+            },
+            "HttpStatusCode": 200
+        },
+        "SdkResponseMetadata": {
+            "RequestId": "88fba57b-adbe-467f-abf4-daca36fc9028"
+        },
+        "StatusCode": 200
+    }
+    next_state, result = state.get_output({"OtherDataFromInput": {}}, output)
+    assert expected_result == result
+
+
+@pytest.mark.parametrize("result_path,expected_result", [
+    [{
+        "InputPath": "$.library",
+        "Parameters": {
+            "staticValue": "Just a string",
+            "catalog": {
+                "myFavoriteMovie.$": "$.movies[0]"
+            }
+        }
+    }, {
+        "staticValue": "Just a string",
+        "catalog": {
+            "myFavoriteMovie": {
+                "genre": "crime",
+                "director": "Quentin Tarantino",
+                "title": "Reservoir Dogs",
+                "year": 1992
+            }
+        }
+    }]
+
+])
+def test_format_input_all_applied_result(result_path, expected_result):
+    state = State.parse(result_path)
+    input = {
+        "version": 4,
+        "library": {
+            "movies": [
+                {
+                    "genre": "crime",
+                    "director": "Quentin Tarantino",
+                    "title": "Reservoir Dogs",
+                    "year": 1992
+                },
+                {
+                    "genre": "action",
+                    "director": "Brian De Palma",
+                    "title": "Mission: Impossible",
+                    "year": 1996,
+                    "staring": [
+                        "Tom Cruise"
+                    ]
+                }
+            ],
+            "metadata": {
+                "lastUpdated": "2020-05-27T08:00:00.000Z"
+            }
+        }
+    }
+    result = state.get_input(input)
     assert expected_result == result
 
 

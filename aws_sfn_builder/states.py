@@ -74,6 +74,7 @@ class State(Node):
             "resource": "Resource",
             "input_path": "InputPath",
             "parameters": "Parameters",
+            "result_selector": "ResultSelector",
             "output_path": "OutputPath",
             "result_path": "ResultPath",
         },
@@ -96,6 +97,7 @@ class State(Node):
     resource: str = None
     input_path: str = None
     parameters: str = None
+    result_selector: str = None
     output_path: str = None
     result_path: str = None
 
@@ -137,15 +139,32 @@ class State(Node):
         Applies InputPath
         """
         if self.parameters:
-            new_params = {}
-            for name, value in self.parameters.items():
+            return self.format_dict(input, self.parameters)
+        return input
+
+    def format_result_selector(self, input):
+        """
+        Applies ResultSelector
+        """
+        if self.result_selector:
+            return self.format_dict(input, self.result_selector)
+        return input
+
+    def format_dict(self, input, dict_param):
+        new_params = {}
+        for name, value in dict_param.items():
+            if name.endswith('.$'):
+                name = name[:-2]
+            if isinstance(value,dict):
+                new_params[name] = self.format_dict(input, value)
+                continue
+            if value.startswith("$."):
                 parsed = parse_jsonpath(value)
                 found = parsed.find(input)
                 if found:
                     value = found[0].value
-                new_params[name] = value
-            return new_params
-        return None
+            new_params[name] = value
+        return new_params
 
     def format_result(self, input, resource_result):
         """
@@ -163,6 +182,7 @@ class State(Node):
                 result_path.update(input, resource_result)
                 return input
         return resource_result
+
 
     def format_state_output(self, result):
         """
@@ -191,21 +211,24 @@ class State(Node):
                 # an exception specifies an invalid path.
                 raise NotImplementedError()
 
-    def get_input_parameters(self, input):
+    def get_input(self, input):
         resource_input = self.format_state_input(input)
+        resource_parameters = self.format_state_parameters(resource_input)
+        return resource_parameters
+
+    def get_parameters(self, input):
         resource_parameters = self.format_state_parameters(input)
-        return resource_input, resource_parameters
+        return resource_parameters
 
     def get_output(self, input, resource_result):
+        resource_result = self.format_result_selector(resource_result)
         result = self.format_result(input, resource_result)
         return self.next, self.format_state_output(result)
 
     def execute(self, input, resource_resolver: Callable=None) -> Tuple[Optional[str], Any]:
-        resource_input = self.format_state_input(input)
-        resource_parameters = self.format_state_parameters(input)
-        resource_result = resource_resolver(self.resource)(resource_input, resource_parameters)
-        result = self.format_result(input, resource_result)
-        return self.next, self.format_state_output(result)
+        resource_input = self.get_input(input)
+        resource_result = resource_resolver(self.resource)(resource_input)
+        return self.get_output(input, resource_result)
 
     def dry_run(self, trace: List):
         trace.append(self.name)
