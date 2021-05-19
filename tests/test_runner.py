@@ -199,6 +199,37 @@ def test_format_input_all_applied_result(result_path, expected_result):
     assert expected_result == result
 
 
+def test_executes_mipres_input(example):
+    test = [
+        {
+            "InputPath": "$",
+            "Parameters": {
+                "staticValue": "Just a string",
+                "page[*]": {
+                    "staticValue": "Just a string",
+                    "error_count.$": "$.page[*].error_count",
+                    "page.$": "$.page[*].page",
+                    "TAG.$": "$.page[*].status.mipres_result.MIPRES_TAG"
+                }
+            }
+        }, {
+            'staticValue': 'Just a string',
+            'page': [
+                {'error_count': 1, 'page': '2'},
+                {'error_count': 1, 'page': '3'},
+                {'error_count': 0, 'page': '1', 'TAG': 'MiPres'},
+                {'error_count': 1, 'page': '4'}]
+            }
+    ]
+    result_path = test[0]
+    expected_result = test[1]
+    mipres_out = example("mipres.out")
+    state = State.parse(result_path)
+
+    result = state.get_input(mipres_out)
+    assert expected_result == result
+
+
 @pytest.mark.parametrize("output_path,expected_state_output", [
     [None, {"guid": "123-456"}],
     ["$", {"guid": "123-456"}],

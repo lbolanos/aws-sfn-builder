@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import dataclasses
 from bidict import bidict
-from jsonpath_ng import parse as parse_jsonpath
+from jsonpath_ng import parse as parse_jsonpath, Index
 
 from .base import Node
 from .choice_rules import ChoiceRule
@@ -12,6 +12,58 @@ from .choice_rules import ChoiceRule
 
 def _generate_name():
     return str(uuid4())
+
+
+def find_index(full_path):
+    if full_path.right:
+        if isinstance(full_path.right, Index):
+            return full_path.right.index
+        else:
+            return find_index(full_path.left)
+    return None
+
+
+def add_to_array(array_param, index, name, value):
+    to_add = index - len(array_param) + 1
+    for i in range(to_add):
+        array_param.append({})
+    array_param[index][name] = value
+
+
+def format_array(input, dict_param):
+    new_array = []
+    for name, value in dict_param.items():
+        if name.endswith('.$'):
+            name = name[:-2]
+        if value.startswith("$.") and "[*]" in value:
+            parsed = parse_jsonpath(value)
+            found = parsed.find(input)
+            for item in found:
+                index = find_index(item.full_path)
+                new_value = item.value
+                add_to_array(new_array, index, name, new_value)
+    return new_array
+
+
+def format_dict(input, dict_param):
+    new_params = {}
+    for name, value in dict_param.items():
+        if name.endswith('.$'):
+            name = name[:-2]
+        if isinstance(value, dict):
+            if name.endswith('[*]'):
+                name = name[:-3]
+                new_params[name] = format_array(input, value)
+            else:
+                new_params[name] = format_dict(input, value)
+            continue
+        if value.startswith("$."):
+            parsed = parse_jsonpath(value)
+            found = parsed.find(input)
+            if found:
+                value = found[0].value
+        new_params[name] = value
+    return new_params
 
 
 class States:
@@ -139,7 +191,7 @@ class State(Node):
         Applies InputPath
         """
         if self.parameters:
-            return self.format_dict(input, self.parameters)
+            return format_dict(input, self.parameters)
         return input
 
     def format_result_selector(self, input):
@@ -147,24 +199,8 @@ class State(Node):
         Applies ResultSelector
         """
         if self.result_selector:
-            return self.format_dict(input, self.result_selector)
+            return format_dict(input, self.result_selector)
         return input
-
-    def format_dict(self, input, dict_param):
-        new_params = {}
-        for name, value in dict_param.items():
-            if name.endswith('.$'):
-                name = name[:-2]
-            if isinstance(value,dict):
-                new_params[name] = self.format_dict(input, value)
-                continue
-            if value.startswith("$."):
-                parsed = parse_jsonpath(value)
-                found = parsed.find(input)
-                if found:
-                    value = found[0].value
-            new_params[name] = value
-        return new_params
 
     def format_result(self, input, resource_result):
         """
@@ -182,7 +218,6 @@ class State(Node):
                 result_path.update(input, resource_result)
                 return input
         return resource_result
-
 
     def format_state_output(self, result):
         """
@@ -225,7 +260,7 @@ class State(Node):
         result = self.format_result(input, resource_result)
         return self.next, self.format_state_output(result)
 
-    def execute(self, input, resource_resolver: Callable=None) -> Tuple[Optional[str], Any]:
+    def execute(self, input, resource_resolver: Callable = None) -> Tuple[Optional[str], Any]:
         resource_input = self.get_input(input)
         resource_result = resource_resolver(self.resource)(resource_input)
         return self.get_output(input, resource_result)
@@ -321,7 +356,7 @@ class Wait(State):
         if self.next is None:
             c["End"] = True
 
-    def execute(self, input, resource_resolver: Callable=None):
+    def execute(self, input, resource_resolver: Callable = None):
         # TODO We don't actually do any waiting here, but perhaps we could delegate it to some predefined resource.
         state_input = self.format_state_input(input)
         state_output = self.format_state_output(state_input)
@@ -342,7 +377,7 @@ class Fail(State):
     cause: str = None
     error: str = None
 
-    def execute(self, input, resource_resolver: Callable=None):
+    def execute(self, input, resource_resolver: Callable = None):
         # TODO No idea what should we do here.
         return None, None
 
@@ -354,7 +389,6 @@ class Succeed(State):
 
 @dataclasses.dataclass
 class Parallel(Task):
-
     _FIELDS = bidict(
         **Task._FIELDS,
         **{
@@ -441,7 +475,7 @@ class Sequence(State):
             state = self.states.get(state.dry_run(trace))
         return self.next
 
-    def insert(self, raw, before: str=None, after: str=None):
+    def insert(self, raw, before: str = None, after: str = None):
         new_state = State.parse(raw)
         if before:
             assert not after
@@ -524,7 +558,7 @@ class Machine(Sequence):
         else:
             raise TypeError(raw)
 
-    def to_json(self, json_options=None, state_visitor: Callable[[State, Dict], None]=None):
+    def to_json(self, json_options=None, state_visitor: Callable[[State, Dict], None] = None):
         """
         Generate a JSON that can be used as a State Machine definition.
 
@@ -542,8 +576,7 @@ class Machine(Sequence):
                 return state
         return None
 
-
-    def dry_run(self, trace: List=None):
+    def dry_run(self, trace: List = None):
         """
         DEPRECATED.
         This probably will change in near future so don't rely on it.
