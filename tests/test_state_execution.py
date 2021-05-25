@@ -16,7 +16,7 @@ def jsp_resource_resolver():
     ],
     [
         {"status": "SUCCEEDED"},
-        ("Consolidator Mipres Output", {"status": "SUCCEEDED"})
+        ("Consolidator Output", {"status": "SUCCEEDED"})
     ],
 ])
 def test_executes_simple_choice(input, expected):
@@ -31,7 +31,7 @@ def test_executes_simple_choice(input, expected):
             {
                 "Variable": "$.status",
                 "StringEquals": "SUCCEEDED",
-                "Next": "Consolidator Mipres Output",
+                "Next": "Consolidator Output",
             }
         ],
         "Default": "Wait X Seconds",
