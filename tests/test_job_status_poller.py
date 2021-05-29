@@ -11,11 +11,11 @@ def test_runs_job_status_poller(example):
     runner = Runner()
 
     @runner.resource_provider("arn:aws:lambda:REGION:ACCOUNT_ID:function:SubmitJob")
-    def submit_job(payload, params):
+    def submit_job(payload):
         return payload
 
     @runner.resource_provider("arn:aws:lambda:REGION:ACCOUNT_ID:function:CheckJob")
-    def check_job(payload, params):
+    def check_job(payload):
         if payload < 30:
             return "FAILED"
         else:

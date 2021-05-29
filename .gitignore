@@ -1,2 +1,4 @@
 build/
 dist/
+/aws_sfn_builder/__pycache__/*.pyc
+/tests/__pycache__/*.pyc

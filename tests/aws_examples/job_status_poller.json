@@ -1,6 +1,7 @@
 {
   "Comment": "A state machine that submits a Job to AWS Batch and monitors the Job until it completes.",
   "StartAt": "Submit Job",
+  "MaxPages": 2,
   "States": {
     "Submit Job": {
       "Type": "Task",
@@ -32,7 +33,7 @@
       "Type": "Task",
       "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:CheckJob",
       "Next": "Job Complete?",
-      "InputPath": "$.guid",
+      "InputPath": "$.input",
       "ResultPath": "$.status",
       "Retry": [
         {
@@ -69,7 +70,7 @@
     "Consolidator Output": {
       "Type": "Task",
       "Resource": "arn:aws:lambda:REGION:ACCOUNT_ID:function:CheckJob",
-      "InputPath": "$.guid",
+      "InputPath": "$.input",
       "End": true,
       "Retry": [
         {

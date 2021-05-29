@@ -537,11 +537,13 @@ class Machine(Sequence):
         **{
             "version": "Version",
             "timeout_seconds": "TimeoutSeconds",
+            "max_pages": "MaxPages"
         },
     )
 
     type: str = States.Machine
     timeout_seconds: int = None
+    max_pages: int = None
     version: str = None
 
     @classmethod
