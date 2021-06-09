@@ -299,6 +299,7 @@ class Task(Pass):
             "catch": "Catch",
             "timeout_seconds": "TimeoutSeconds",
             "heartbeat_seconds": "HeartbeatSeconds",
+            "parallel_pages": "ParallelPages",
         },
     )
 
@@ -307,6 +308,7 @@ class Task(Pass):
     catch: List = None
     timeout_seconds: int = None
     heartbeat_seconds: int = None
+    parallel_pages: bool = None
 
 
 @dataclasses.dataclass

@@ -7,6 +7,8 @@ def test_runs_job_status_poller(example):
     source = example("job_status_poller")
     sm = Machine.parse(source)
     assert sm.compile() == source
+    assert sm.max_pages == 2
+    assert sm.states['Submit Job'].parallel_pages == True
 
     runner = Runner()
 
@@ -22,6 +24,6 @@ def test_runs_job_status_poller(example):
             return "SUCCEEDED"
 
     final_state, output = runner.run(sm, {'input': 25})
-    assert final_state.name in ( "Job Failed")
+    assert final_state.name in ("Job Failed")
     final_state, output = runner.run(sm, {'input': 40})
-    assert final_state.name in ( "Consolidator Output")
+    assert final_state.name in ("Consolidator Output")

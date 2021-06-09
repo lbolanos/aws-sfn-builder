@@ -9,6 +9,7 @@
       "ResultPath": "$.guid",
       "InputPath": "$.input",
       "Next": "Wait X Seconds",
+      "ParallelPages": true,
       "Parameters": {
           "state": "run-mediainfo",
           "$.guid_leo": "$.input"
