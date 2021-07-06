@@ -57,7 +57,7 @@ def format_dict(input, dict_param):
             else:
                 new_params[name] = format_dict(input, value)
             continue
-        if value.startswith("$."):
+        if isinstance(value, str) and value.startswith("$."):
             parsed = parse_jsonpath(value)
             found = parsed.find(input)
             if found:
