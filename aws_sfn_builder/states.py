@@ -46,11 +46,13 @@ def format_array(input, dict_param):
 
 
 def format_dict(input, dict_param):
+    if isinstance(dict_param,list):
+        return dict_param
     new_params = {}
     for name, value in dict_param.items():
         if name.endswith('.$'):
             name = name[:-2]
-        if isinstance(value, dict):
+        if isinstance(value, dict) or isinstance(value,list):
             if name.endswith('[*]'):
                 name = name[:-3]
                 new_params[name] = format_array(input, value)
