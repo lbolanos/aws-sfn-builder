@@ -19,7 +19,10 @@ def find_index(full_path):
         if isinstance(full_path.right, Index):
             return full_path.right.index
         else:
-            return find_index(full_path.left)
+            if isinstance(full_path.left, Index):
+                return full_path.left.index
+            else:
+                return find_index(full_path.left)
     return None
 
 
@@ -35,24 +38,35 @@ def format_array(input, dict_param):
     for name, value in dict_param.items():
         if name.endswith('.$'):
             name = name[:-2]
-        if value.startswith("$.") and "[*]" in value:
-            parsed = parse_jsonpath(value)
-            found = parsed.find(input)
-            for item in found:
-                index = find_index(item.full_path)
-                new_value = item.value
-                add_to_array(new_array, index, name, new_value)
+        if value.startswith("$") and "[*]" in value:
+            parse_json(input, value, name, new_array)
     return new_array
 
 
+def parse_json(input, value, name, new_array=None):
+    parsed = parse_jsonpath(value)
+    found = parsed.find(input)
+    if found and isinstance(found, list) and "[*]" in value:
+        for item in found:
+            index = find_index(item.full_path)
+            new_value = item.value
+            add_to_array(new_array, index, name, new_value)
+        return new_array
+    if found:
+        value = found[0].value
+    return value
+
 def format_dict(input, dict_param):
-    if isinstance(dict_param,list):
+    if isinstance(dict_param, list):
         return dict_param
     new_params = {}
     for name, value in dict_param.items():
         if name.endswith('.$'):
             name = name[:-2]
-        if isinstance(value, dict) or isinstance(value,list):
+        if isinstance(value, str) and value.startswith("$") and name.endswith('[*]'):
+            name = name[:-3]
+            value = parse_json(input, value, name)
+        elif isinstance(value, dict) or isinstance(value, list):
             if name.endswith('[*]'):
                 name = name[:-3]
                 new_params[name] = format_array(input, value)
@@ -60,12 +74,10 @@ def format_dict(input, dict_param):
                 new_params[name] = format_dict(input, value)
             continue
         if isinstance(value, str) and value.startswith("$."):
-            parsed = parse_jsonpath(value)
-            found = parsed.find(input)
-            if found:
-                value = found[0].value
+            value = parse_json(input, value, name)
         new_params[name] = value
     return new_params
+
 
 
 class States:
