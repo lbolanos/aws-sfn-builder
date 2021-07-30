@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import dataclasses
 from bidict import bidict
-from jsonpath_ng import parse as parse_jsonpath, Index
+from jsonpath_ng import parse as parse_jsonpath, Index, Child
 
 from .base import Node
 from .choice_rules import ChoiceRule
@@ -26,6 +26,39 @@ def find_index(full_path):
     return None
 
 
+def find_indexes(full_path, just_first=False):
+    if full_path.right:
+        if isinstance(full_path.right, Index):
+            if isinstance(full_path.left, Child):
+                if just_first:
+                    return find_indexes(full_path.left, just_first)
+                return str(find_indexes(full_path.left)) + "-" + str(full_path.right.index)
+            else:
+                return full_path.right.index
+        else:
+            if isinstance(full_path.left, Index):
+                if isinstance(full_path.right, Child):
+                    if just_first:
+                        return find_indexes(full_path.right, just_first)
+                    return str(find_indexes(full_path.right)) + "-" + str(full_path.left.index)
+                else:
+                    return full_path.left.index
+            else:
+                return find_indexes(full_path.left, just_first)
+    return None
+
+
+def add_to_array_inner(array_param, index, indexes, name, value):
+    to_add = index - len(array_param) + 1
+    for i in range(to_add):
+        array_param.append({})
+    if indexes not in array_param[index]:
+        array_param[index][indexes] = {}
+    # if indexes not in array_param[index][name]:
+    #     array_param[index][name][indexes] = {}
+    array_param[index][indexes][name] = value
+
+
 def add_to_array(array_param, index, name, value):
     to_add = index - len(array_param) + 1
     for i in range(to_add):
@@ -43,18 +76,36 @@ def format_array(input, dict_param):
     return new_array
 
 
+def remove_alias(name):
+    try:
+        idx = name.index("_ALIAS")
+        return name[:idx]
+    except ValueError:
+        return name
+    # if "_ALIAS" in name:
+
+
 def parse_json(input, value, name, new_array=None):
     parsed = parse_jsonpath(value)
     found = parsed.find(input)
+    name_temp = remove_alias(name[:-3])
     if found and isinstance(found, list) and "[*]" in value:
+        if new_array is None:
+            new_array = []
         for item in found:
-            index = find_index(item.full_path)
             new_value = item.value
-            add_to_array(new_array, index, name, new_value)
+            if name.endswith('[*]'):
+                index = find_indexes(item.full_path, True)
+                indexes = find_indexes(item.full_path)
+                add_to_array_inner(new_array, int(index), indexes, name_temp, new_value)
+            else:
+                index = find_index(item.full_path)
+                add_to_array(new_array, index, name, new_value)
         return new_array
     if found:
         value = found[0].value
     return value
+
 
 def format_dict(input, dict_param):
     if isinstance(dict_param, list):
@@ -77,7 +128,6 @@ def format_dict(input, dict_param):
             value = parse_json(input, value, name)
         new_params[name] = value
     return new_params
-
 
 
 class States:
