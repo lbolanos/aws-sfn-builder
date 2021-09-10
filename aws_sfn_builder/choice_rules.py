@@ -9,7 +9,7 @@ from .base import Node
 
 
 class _OperatorDef:
-    def __init__(self, impl: Callable=None):
+    def __init__(self, impl: Callable = None):
         self.name = None
         self.impl = impl
 
@@ -34,7 +34,6 @@ def to_numeric(x):
         return float(x)
 
 
-
 def to_timestamp(x):
     if isinstance(x, dt.datetime):
         return x.isoformat()
@@ -45,6 +44,12 @@ class Operators:
     ALL: Dict[str, _OperatorDef] = {}
 
     And = _OperatorDef()
+    IsBoolean = _OperatorDef(lambda a: isinstance(a, bool) or a.tolower() in ['true', 't', '1', 'false', 'f', '0'])
+    IsNull = _OperatorDef(lambda a: a is None)
+    IsNumeric = _OperatorDef(lambda a: isinstance(a, (int, float, complex)) or a.isnumeric())
+    IsPresent = _OperatorDef(lambda a: None)  # TODO
+    IsString = _OperatorDef(lambda a: isinstance(a, str))
+    IsTimestamp = _OperatorDef(lambda a: None)  # TODO
     BooleanEquals = _OperatorDef(lambda a, x: to_bool(x) is a)
     Not = _OperatorDef()
     NumericEquals = _OperatorDef(lambda a, x: to_numeric(x) == a)
@@ -58,6 +63,7 @@ class Operators:
     StringGreaterThanEquals = _OperatorDef(lambda a, x: str(x) >= a)
     StringLessThan = _OperatorDef(lambda a, x: str(x) < a)
     StringLessThanEquals = _OperatorDef(lambda a, x: str(x) <= a)
+    StringMatches = _OperatorDef(lambda a, x: None)  # TODO
     TimestampEquals = _OperatorDef(lambda a, x: to_timestamp(x) == a)
     TimestampGreaterThan = _OperatorDef(lambda a, x: to_timestamp(x) > a)
     TimestampGreaterThanEquals = _OperatorDef(lambda a, x: to_timestamp(x) >= a)
